@@ -110,7 +110,7 @@ class Defaults:
     MAZE_WALLS = False
     HIGHER_DIM_OBS = False
 
-    ITERS_PER_UPDATE = 10000
+    ITERS_PER_UPDATE = 30000
     # ITERS_PER_UPDATE = 10
 
     # For plotting

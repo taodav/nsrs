@@ -110,7 +110,7 @@ class Defaults:
     HIGHER_DIM_OBS = False # Not implemented higher_dim_obs yet
 
     # ITERS_PER_UPDATE = 1
-    ITERS_PER_UPDATE = 1
+    ITERS_PER_UPDATE = 50000
 
     # For plotting
     OFFLINE_PLOTTING = False
