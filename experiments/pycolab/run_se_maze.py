@@ -10,20 +10,20 @@ import json
 import torch
 import copy
 
-from deer.default_parser import process_se_args, stringify_params
-from deer.agent import SEAgent
-from deer.learning_algos.NAR_pytorch import NAR
+from nsrl.default_parser import process_se_args, stringify_params
+from nsrl.agent import SEAgent
+from nsrl.learning_algos.NSRS_pytorch import NSRS
 from maze_env import MazeEnv
 
-import deer.experiment.base_controllers as bc
-import deer.experiment.exploration_helpers as eh
-from deer.helper.plot import Plotter
-from deer.helper.knn import ranked_avg_knn_scores, avg_knn_scores, batch_knn, batch_count_scaled_knn
-from deer.helper.data import Bunch
+import nsrl.experiment.base_controllers as bc
+import nsrl.experiment.exploration_helpers as eh
+from nsrl.helper.plot import Plotter
+from nsrl.helper.knn import ranked_avg_knn_scores, avg_knn_scores, batch_knn, batch_count_scaled_knn
+from nsrl.helper.data import Bunch
 from definitions import ROOT_DIR
 
-from deer.policies import EpsilonGreedyPolicy
-import deer.policies.exploration_policies as ep
+from nsrl.policies import EpsilonGreedyPolicy
+import nsrl.policies.exploration_policies as ep
 
 class Defaults:
     # ----------------------
@@ -182,7 +182,7 @@ if __name__ == "__main__":
         parameters.dataset_fname = None
 
     if continue_running:
-        from deer.helper.data import Bunch
+        from nsrl.helper.data import Bunch
 
         print("Resuming training from directory %s" % parameters.experiment_dir)
         param_fname = os.path.join(parameters.experiment_dir, "parameters.json")
@@ -240,7 +240,7 @@ if __name__ == "__main__":
     # reload dataset here if need be
 
     if hasattr(parameters, 'dataset_fname') and parameters.dataset_fname is not None and continue_running:
-        from deer.helper.data import DataSet
+        from nsrl.helper.data import DataSet
 
         dataset = DataSet.load(parameters.dataset_fname)
         parameters.dataset_fname = None
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     plotter.plot_text('hyperparams', stringify_params(parameters))
 
     # --- Instantiate learning_algo ---
-    learning_algo = NAR(
+    learning_algo = NSRS(
         env,
         random_state=rng,
         high_int_dim=False,

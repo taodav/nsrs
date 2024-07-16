@@ -4,10 +4,10 @@ import copy
 import numpy as np
 import torch
 import json
-from deer.experiment.base_controllers import Controller
-from deer.helper.exploration import calculate_scores
-from deer.helper.knn import ranked_avg_knn_scores, batch_count_scaled_knn
-from deer.helper.pytorch import device, calculate_large_batch
+from nsrl.experiment.base_controllers import Controller
+from nsrl.helper.exploration import calculate_scores
+from nsrl.helper.knn import ranked_avg_knn_scores, batch_count_scaled_knn
+from nsrl.helper.pytorch import device, calculate_large_batch
 
 
 class ExplorationMetricController(Controller):

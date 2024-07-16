@@ -21,19 +21,19 @@ import json
 import copy
 from joblib import hash, dump
 
-from deer.default_parser import process_se_args, stringify_params
-from deer.agent import SEAgent
-from deer.learning_algos.NAR_pytorch import NAR
+from nsrl.default_parser import process_se_args, stringify_params
+from nsrl.agent import SEAgent
+from nsrl.learning_algos.NSRS_pytorch import NSRS
 from simple_maze_env_pytorch import MyEnv as simple_maze_env
-import deer.experiment.base_controllers as bc
-import deer.experiment.exploration_helpers as eh
-from deer.helper.plot import Plotter
-from deer.helper.knn import ranked_avg_knn_scores, avg_knn_scores, batch_knn, batch_count_scaled_knn
-from deer.helper.data import Bunch
+import nsrl.experiment.base_controllers as bc
+import nsrl.experiment.exploration_helpers as eh
+from nsrl.helper.plot import Plotter
+from nsrl.helper.knn import ranked_avg_knn_scores, avg_knn_scores, batch_knn, batch_count_scaled_knn
+from nsrl.helper.data import Bunch
 from definitions import ROOT_DIR
 
-from deer.policies import EpsilonGreedyPolicy
-import deer.policies.exploration_policies as ep
+from nsrl.policies import EpsilonGreedyPolicy
+import nsrl.policies.exploration_policies as ep
 
 class Defaults:
     # ----------------------
@@ -263,7 +263,7 @@ if __name__ == "__main__":
 
 
     # --- Instantiate learning_algo ---
-    learning_algo = NAR(
+    learning_algo = NSRS(
         env,
         random_state=rng,
         high_int_dim=False,

@@ -17,18 +17,18 @@ from joblib import hash, dump
 
 sys.path.append(os.getcwd())
 
-from deer.default_parser import process_se_args
-from deer.agent import SEAgent
-from deer.learning_algos.NAR_pytorch import NAR
+from nsrl.default_parser import process_se_args
+from nsrl.agent import SEAgent
+from nsrl.learning_algos.NSRS_pytorch import NSRS
 from simple_maze_env_pytorch import MyEnv as simple_maze_env
-import deer.experiment.base_controllers as bc
-from deer.experiment.exploration_helpers import ExplorationMetricController
-from deer.helper.plot import Plotter
+import nsrl.experiment.base_controllers as bc
+from nsrl.experiment.exploration_helpers import ExplorationMetricController
+from nsrl.helper.plot import Plotter
 from definitions import ROOT_DIR
 
 from datetime import datetime
 
-from deer.policies import RandomPolicy
+from nsrl.policies import RandomPolicy
 
 class Defaults:
     # ----------------------
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         parameters.env_name = 'random_agent_wallless_%d' % parameters.size_maze
 
     # --- Instantiate learning_algo ---
-    learning_algo = NAR(
+    learning_algo = NSRS(
         env,
         rho=parameters.rms_decay,
         rms_epsilon=parameters.rms_epsilon,

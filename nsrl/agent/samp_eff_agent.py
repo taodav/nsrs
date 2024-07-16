@@ -144,7 +144,7 @@ class SEAgent(NeuralAgent):
             iters_to_run = self._iters_per_update * (4 - self._num_train_steps)
 
         # import tracemalloc
-        # from deer.helper.mem_profiler import display_top
+        # from nsrl.helper.mem_profiler import display_top
         #
         # tracemalloc.start()
 

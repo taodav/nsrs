@@ -11,18 +11,18 @@ import copy
 import numpy as np
 from joblib import hash, dump
 
-from deer.default_parser import process_gym_args, stringify_params
-from deer.agent import SEAgent
-from deer.learning_algos.NAR_pytorch import NAR
+from nsrl.default_parser import process_gym_args, stringify_params
+from nsrl.agent import SEAgent
+from nsrl.learning_algos.NSRS_pytorch import NSRS
 from control_env import MyEnv as Control_env
-import deer.experiment.base_controllers as bc
-import deer.experiment.exploration_helpers as eh
-from deer.helper.plot import Plotter
+import nsrl.experiment.base_controllers as bc
+import nsrl.experiment.exploration_helpers as eh
+from nsrl.helper.plot import Plotter
 from definitions import ROOT_DIR
-from deer.helper.knn import ranked_avg_knn_scores, avg_knn_scores, batch_knn, batch_count_scaled_knn
+from nsrl.helper.knn import ranked_avg_knn_scores, avg_knn_scores, batch_knn, batch_count_scaled_knn
 
-from deer.policies import EpsilonGreedyPolicy
-import deer.policies.exploration_policies as ep
+from nsrl.policies import EpsilonGreedyPolicy
+import nsrl.policies.exploration_policies as ep
 """
 TODO: 
 * Try repeated transitions (with different skulls) to see if approach can ignore noise - DONE
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     continue_running = parameters.experiment_dir is not None and parameters.start_count > 0
 
     if continue_running:
-        from deer.helper.data import Bunch
+        from nsrl.helper.data import Bunch
 
         print("Resuming training from directory %s" % parameters.experiment_dir)
         param_fname = os.path.join(parameters.experiment_dir, "parameters.json")
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     # reload dataset here if need be
 
     if hasattr(parameters, 'dataset_fname') and parameters.dataset_fname is not None and continue_running:
-        from deer.helper.data import DataSet
+        from nsrl.helper.data import DataSet
 
         dataset = DataSet.load(parameters.dataset_fname)
         parameters.dataset_fname = None
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     parameters.score_func = score_func
     parameters.knn = knn
 
-    learning_algo = NAR(
+    learning_algo = NSRS(
         env,
         random_state=rng,
         high_dim_obs=parameters.higher_dim_obs,
