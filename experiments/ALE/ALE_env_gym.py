@@ -147,7 +147,7 @@ class MyEnv(Environment):
         state_dim = self._frame_size
         if self._timesteps_per_action > 1:
             state_dim = (self._timesteps_per_action, ) + self._frame_size
-        self.state = np.zeros(state_dim, dtype=np.float)
+        self.state = np.zeros(state_dim, dtype=np.float32)
         reward=0
 
         if self._reduced_actions:

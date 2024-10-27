@@ -1,3 +1,4 @@
 {
-    "Codegeex.Privacy": true
+    "Codegeex.Privacy": true,
+    "git.ignoreLimitWarning": true
 }

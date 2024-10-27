@@ -24,6 +24,7 @@ from definitions import ROOT_DIR
 
 from nsrl.policies import EpsilonGreedyPolicy
 import nsrl.policies.exploration_policies as ep
+from nsrl.helper.exploration import calculate_scores, calculate_scores_kde
 
 class Defaults:
     # ----------------------
@@ -109,8 +110,16 @@ class Defaults:
     # MAZE_WALLS = False
     HIGHER_DIM_OBS = False # Not implemented higher_dim_obs yet
 
-    # ITERS_PER_UPDATE = 1
-    ITERS_PER_UPDATE = 50000
+    #@@@@@@@@@@@@@@@@@
+    #renyi: -1 origin+action, 0 origin, 1 H_x, 2H_xa, 3   , 4 I_xa_x2
+    RENYI = 4
+    
+    METRIC_FUNCTION = 'calculate_scores_kde'
+    # METRIC_FUNCTION = 'calculate_scores'
+    
+    ITERS_PER_UPDATE = 1
+    # ITERS_PER_UPDATE = 50000 #@
+    #@@@@@@@@@@@@@@@@@@
 
     # For plotting
     OFFLINE_PLOTTING = False
@@ -133,6 +142,8 @@ if __name__ == "__main__":
     parameters.env_name = "N_maze " + parameters.env_name
 
     parameters.replay_start_size = parameters.batch_size
+    parameters.metric_function = Defaults.METRIC_FUNCTION
+    parameters.renyi = Defaults.RENYI
 
     measure_exploration = parameters.size_maze != 15
 
@@ -171,7 +182,7 @@ if __name__ == "__main__":
 
     root_save_path = os.path.join(ROOT_DIR, "examples", "pycolab", "experiments")
     try:
-        os.mkdir(root_save_path)
+        os.makedirs(root_save_path)
     except Exception:
         pass
 
@@ -210,7 +221,8 @@ if __name__ == "__main__":
     h = parameters.env_name + '_' + parameters.job_id
     parameters.experiment_dir = os.path.join(root_save_path, h)
 
-    os.mkdir(parameters.experiment_dir)
+    os.makedirs(parameters.experiment_dir)
+    # os.mkdir(parameters.experiment_dir)
 
     # Save parameters here
     param_dict = vars(copy.deepcopy(parameters))
@@ -266,8 +278,8 @@ if __name__ == "__main__":
         test_policy = ep.QArgmaxPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
         train_policy = ep.QArgmaxPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
     elif parameters.action_type == 'd_step_q_planning':
-        test_policy = ep.MCPolicy(learning_algo, parameters.reward_type, env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
-        train_policy = ep.MCPolicy(learning_algo, parameters.reward_type, env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
+        test_policy = ep.MCPolicy(learning_algo,  env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
+        train_policy = ep.MCPolicy(learning_algo,  env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
     elif parameters.action_type == 'bootstrap_q':
         test_policy = ep.BootstrapDQNPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
         train_policy = ep.BootstrapDQNPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
@@ -357,7 +369,9 @@ if __name__ == "__main__":
             k=parameters.k,
             score_func=score_func,
             knn=knn,
-            secondary=False
+            secondary=False,
+            plotter=plotter,
+            metric_func=parameters.metric_function,
         ))
     elif parameters.reward_type == 'hash_count_reward':
         agent.attach(eh.HashCountRewardController(

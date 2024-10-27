@@ -243,12 +243,12 @@ class RewardController(Controller):
 import matplotlib.pyplot as plt
 class NoveltyRewardController(RewardController):
     def __init__(self, evaluate_on='train_loop', periodicity=1,
-                 metric_func=calculate_scores,
+                 metric_func = 'calculate_scores',
                  score_func=ranked_avg_knn_scores, k=10, knn=batch_count_scaled_knn,
                  secondary=False, plotter=None):
         super(NoveltyRewardController, self).__init__(evaluate_on=evaluate_on, periodicity=periodicity)
 
-        self._metric_func = metric_func
+        self._metric_func = globals()[metric_func]
         self._k = k
         self._score_func = score_func
         self._knn = knn

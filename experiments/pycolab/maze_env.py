@@ -153,6 +153,7 @@ def make_game(level):
     drapes = {'K': KeyDrape, 'D': DoneDrape, 'T': TempWallsDrape}
 
     update_schedule = [['D', 'P', 'K', 'T']]
+    # breakpoint()
     return ascii_art.ascii_art_to_game(
         maze_art, what_lies_beneath, sprites, drapes,
         update_schedule=update_schedule)
@@ -217,7 +218,7 @@ class MazeEnv(Environment):
         return self._input_dims
 
     def observationType(self, subject):
-        return np.float
+        return float
 
     def nActions(self):
         return 4

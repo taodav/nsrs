@@ -27,6 +27,7 @@ class SEAgent(NeuralAgent):
                  reward_learning="only_primary", **kwargs):
         super(SEAgent, self).__init__(environment, learning_algo, **kwargs)
         self._num_train_steps = kwargs.get('start_count', 0)
+        self._renyi = kwargs.get('renyi', -999)
 
         self._learn_representation = learn_representation
         self._iters_per_update = iters_per_update
@@ -100,7 +101,7 @@ class SEAgent(NeuralAgent):
 
         repr_losses = self._learning_algo.train_repr(
             states[0], actions, rewards, next_states[0],
-            terminals.astype(float), training=False)
+            terminals.astype(float), training=False, renyi=self._renyi)
 
         return sum(v for v in repr_losses.values())
 
@@ -172,7 +173,7 @@ class SEAgent(NeuralAgent):
             # TEST for secondary rewards here
             if self._learn_representation:
                 repr_losses, random_states_loss_ind, transition_loss_ind = \
-                    self._learning_algo.train_repr(nstep_states[0], nstep_actions, nstep_rewards, nstep_terminals.astype(float), scale=self._dataset.n_elems)
+                    self._learning_algo.train_repr(nstep_states[0], nstep_actions, nstep_rewards, nstep_terminals.astype(float), scale=self._dataset.n_elems, renyi = self._renyi)
 
                 if 'trans_rand_ent_combined' not in self._all_losses:
                     self._all_losses['trans_rand_ent_combined'] = []

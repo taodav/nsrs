@@ -63,7 +63,7 @@ def calculate_scores(states, memory, encoder=None, k=10, dist_score=ranked_avg_k
         scores = dist_score(encoded_states.cpu().detach().numpy(),
                             encoded_memory.cpu().detach().numpy(), k=k,
                             knn=knn)
-        if encoded_states.shape[0] != 1:
+        if encoded_states.shape[0] != 1 and plotter is not None:
             print("encoded_states shape: ", encoded_states.shape)
             plotter.plot("newest knn scores", np.array([_count]), np.array([scores[-1]]), "newest knn scores")
             plotter.plot("knn scores 0", np.array([_count]), np.array([scores[0]]), "knn scores 0")
@@ -132,7 +132,7 @@ def calculate_scores_kde(states, memory, encoder=None, band_witdth=None, k=10, d
 
         scores = 1 / result
         log_scores = np.log(scores)
-        print("result", result)
+        # print("result", result)
         # print("scores", scores)
         # print("log scores", log_scores)
         # self._plotter.plot("intrinsic_mean_rewards", np.array([self._count]), [np.mean(intr_rewards)], title_name="Intrinsic Rewards")

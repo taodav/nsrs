@@ -1,0 +1,8 @@
+Intrinsic rewards:  9.990464496080904 8.210147195842731 8.91681329767823
+result [5.8402427e-05]
+newest Intrinsic rewards:  [9.74815311]
+Average (on the epoch) training loss: -1
+Episode average V value: 31.823327257949117
+New learning rate set to 0.00025.
+Saving model and agent from action 520
+Dumping network to /home/user/Desktop/nsrs/examples/gym/experiments/acrobot--novelty_reward_with_d_step_q_planning_2024-08-10--19-28-58_0/model

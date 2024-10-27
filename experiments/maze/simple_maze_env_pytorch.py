@@ -427,7 +427,7 @@ class MyEnv(Environment):
             return [(1,self._size_maze,self._size_maze)]
 
     def observationType(self, subject):
-        return np.float
+        return float
 
     def nActions(self):
         return 4

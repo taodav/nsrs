@@ -70,7 +70,7 @@ class Defaults:
     REPLAY_MEMORY_SIZE = 10000
     BATCH_SIZE = 64 #origin 64
     FREEZE_INTERVAL = 1000
-    DETERMINISTIC = True
+    DETERMINISTIC = False
 
     LEARN_REPRESENTATION = True
 
@@ -89,6 +89,7 @@ class Defaults:
     # ACTION_TYPE = 'bootstrap_q'
 
     ENV = 'acrobot'
+    # ENV = 'MountainCar-v0'
 
     # SCORE_FUNC = 'ranked_avg_knn_scores'
     SCORE_FUNC = 'avg_knn_scores'
@@ -121,7 +122,7 @@ class Defaults:
     HIGHER_DIM_OBS = True
 
     # ITERS_PER_UPDATE = 5000    #origin 50000
-    ITERS_PER_UPDATE = 100
+    ITERS_PER_UPDATE = 10000
 
     # For plotting
     OFFLINE_PLOTTING = False

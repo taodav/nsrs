@@ -13,6 +13,8 @@ from nsrl.helper.pytorch import device
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
+from . import MI
+from . import CS_ENTROPY    
 
 def mean_squared_error_p_pytorch(y_pred, target=1.0):
     """ Modified mean square error that clips
@@ -47,7 +49,7 @@ class NSRS(LearningAlgo):
                  batch_size=32, update_rule="rmsprop", random_state=np.random.RandomState(),
                  neural_network=NN, learn_representation=True, k=10,
                  score_func=ranked_avg_knn_scores, knn=batch_count_scaled_knn,
-                 obs_per_state=1, action_type='q_argmax', **kwargs):
+                 obs_per_state=1, action_type='q_argmax', learn_back_representation = False, **kwargs):
         super(NSRS, self).__init__(environment, batch_size)
         self._rho = rho
         self._rms_epsilon = rms_epsilon
@@ -65,6 +67,7 @@ class NSRS(LearningAlgo):
         self._rnn_q_func = kwargs.get('rnn_q_func', False)
         self._beta = beta
         self._learn_representation = learn_representation
+        self._learn_back_representation = learn_back_representation
         self._depth = kwargs.get('depth', 1)
         self._train_csc_ent = kwargs.get('train_csc_ent', False)
         self._train_csc_dist = kwargs.get('train_csc_dist', False)
@@ -115,10 +118,15 @@ class NSRS(LearningAlgo):
 
         self.gamma = self.learn_and_plan.float_model().to(device)
         self.transition = self.learn_and_plan.transition_model().to(device)
+        if self._learn_back_representation:
+            self.back_transition = self.learn_and_plan.transition_model().to(device)    #x'a -> x
 
         self.all_models = [self.Q]
         if self._learn_representation:
             self.all_models = [self.encoder,self.R,self.Q,self.gamma,self.transition]
+        
+        if self._learn_back_representation:
+            self.all_models = [self.encoder,self.R,self.Q,self.gamma,self.transition, self.back_transition]
 
         # used to fit Q value
         self.full_Q = self.learn_and_plan.full_Q_model
@@ -160,12 +168,16 @@ class NSRS(LearningAlgo):
         self.R_target = self.learn_and_plan_target.float_model().to(device)
         self.gamma_target = self.learn_and_plan_target.float_model().to(device)
         self.transition_target = self.learn_and_plan_target.transition_model().to(device)
+        if self._learn_back_representation:
+            self.back_transition_target = self.learn_and_plan_target.transition_model().to(device)
 
         self.full_Q_target = self.learn_and_plan_target.full_Q_model
 
         self.all_models_target = [self.Q_target]
         if self._learn_representation:
             self.all_models_target = [self.encoder_target,self.R_target,self.Q_target,self.gamma_target,self.transition_target]
+        if self._learn_back_representation:
+            self.all_models_target = [self.encoder_target,self.R_target,self.Q_target,self.gamma_target,self.transition_target, self.back_transition_target]
 
     @property
     def internal_dim(self):
@@ -208,6 +220,7 @@ class NSRS(LearningAlgo):
             self.optimizer_full_Q = optim.RMSprop(self.Q.parameters(), lr=self._lr, alpha=self._rho,
                                                   eps=self._rms_epsilon)
             self.optimizer_diff_Tx_x_ = None
+            self.back_optimizer_diff_Tx_x_ = None
             self.optimizer_full_R = None
             self.optimizer_full_gamma = None
             self.optimizer_encoder = None
@@ -237,13 +250,44 @@ class NSRS(LearningAlgo):
 
                 self.optimizer_repr = optim.RMSprop(list(self.encoder.parameters()) + list(self.transition.parameters()) + list(self.R.parameters()),
                                                     lr=self._lr, alpha=self._rho, eps=self._rms_epsilon)
+                
+            if self._learn_back_representation:
+                q_params = list(self.Q.parameters())
+                if self._encoder_prop_td:
+                    q_params = list(self.encoder.parameters()) + q_params
+                self.optimizer_full_Q = optim.RMSprop(q_params,
+                                                    lr=self._lr, alpha=self._rho, eps=self._rms_epsilon)
+                self.optimizer_diff_Tx_x_ = optim.RMSprop(
+                    list(self.encoder.parameters()) + list(self.transition.parameters()), lr=self._lr, alpha=self._rho,
+                    eps=self._rms_epsilon)  # Different optimizers for each network;
+                
+                self.back_optimizer_diff_Tx_x_ = optim.RMSprop(
+                    list(self.encoder.parameters()) + list(self.back_transition.parameters()), lr=self._lr, alpha=self._rho,
+                    eps=self._rms_epsilon)  # Different optimizers for each network;
+
+
+
+                self.optimizer_full_R = optim.RMSprop(list(self.encoder.parameters()) + list(self.R.parameters()),
+                                                    lr=self._lr, alpha=self._rho,
+                                                    eps=self._rms_epsilon)  # to possibly modify them separately
+                self.optimizer_full_gamma = optim.RMSprop(list(self.encoder.parameters()) + list(self.gamma.parameters()),
+                                                        lr=self._lr, alpha=self._rho, eps=self._rms_epsilon)
+                self.optimizer_encoder = optim.RMSprop(self.encoder.parameters(), lr=self._lr, alpha=self._rho,
+                                                    eps=self._rms_epsilon)
+                self.optimizer_encoder_diff = optim.RMSprop(self.encoder.parameters(), lr=self._lr, alpha=self._rho,
+                                                            eps=self._rms_epsilon)
+                self.optimizer_diff_s_s_ = optim.RMSprop(self.encoder.parameters(), lr=self._lr, alpha=self._rho,
+                                                        eps=self._rms_epsilon)
+
+                self.optimizer_repr = optim.RMSprop(list(self.encoder.parameters()) + list(self.transition.parameters()) + list(self.back_transition.parameters()) + list(self.R.parameters()),
+                                                    lr=self._lr, alpha=self._rho, eps=self._rms_epsilon)
 
             # self.optimizer_force_features=optim.RMSprop(list(self.encoder.parameters()) + list(self.transition.parameters()), lr=self._lr, alpha=self._rho, eps=self._rms_epsilon) # This never gets updated
 
         else:
             raise Exception('The update_rule ' + self._update_rule + ' is not implemented.')
 
-        self.optimizers = [self.optimizer_full_Q, self.optimizer_diff_Tx_x_,
+        self.optimizers = [self.optimizer_full_Q, self.optimizer_diff_Tx_x_, self.back_optimizer_diff_Tx_x_,
                            self.optimizer_full_R, self.optimizer_full_gamma,
                            self.optimizer_encoder, self.optimizer_encoder_diff,
                            self.optimizer_diff_s_s_]
@@ -265,7 +309,7 @@ class NSRS(LearningAlgo):
             # append to abstr states as transition_model inputs
             transition_inputs = torch.cat((abstr_states, action), dim=-1)
             prev_abstr_states = abstr_states
-            abstr_states = self.transition(transition_inputs)
+            abstr_states = self.transition(transition_inputs)   #my prediction
 
             # get our target abstract states at step i + 1
             current_state = nstep_states[:, i + 1:self._obs_per_state + i + 1]
@@ -280,12 +324,63 @@ class NSRS(LearningAlgo):
             # diff = torch.sum(((abstr_states - target_abstr_states) * (1 - nstep_terminals[:, i])).norm(dim=-1).pow(2), dim=-1)
             lv = lalign(abstr_states, target_abstr_states)
             if normalize:
-                state_diff = F.pairwise_distance(prev_abstr_states, abstr_states, p=2.0).detach()
+                state_diff = F.pairwise_distance(prev_abstr_states, abstr_states, p=2.0).detach()   #我预测的和原本的抽象状态的距离
+                lv /= state_diff
+            if validation:
+                # if we calculate validation values, sum diff over dims of abstract states and square.
+                val_diff = ((abstr_states - target_abstr_states) * (1 - nstep_terminals[:, i])).norm(dim=-1).pow(2) #去掉停止的以后，预测的和实际的误差
+                validation_tensors += val_diff
+            # loss_val += loss_func(diff, torch.zeros_like(diff))
+            loss_val += lv.mean()
+
+        # Normalization
+        validation_tensors /= steps
+        loss_val /= steps
+
+        if validation:
+            return loss_val, validation_tensors
+
+        return loss_val, abstr_states
+    
+    def calc_nstep_back_transition_loss(self, abstr_states, nstep_states, nstep_onehot_actions, nstep_terminals,
+                                   validation=False, normalize=False):
+
+        steps = nstep_onehot_actions.shape[1]
+        # initial abstract states
+
+        loss_val = torch.tensor(0.0, requires_grad=False, device=device, dtype=torch.float)
+        validation_tensors = torch.zeros(abstr_states.shape[0]).to(device)
+
+        for i in range(steps):
+            # get onehot actions for step i
+            action = nstep_onehot_actions[:, i]
+            
+            # get our target abstract states at step i + 1
+            next_state = nstep_states[:, i + 1:self._obs_per_state + i + 1]
+            if self._obs_per_state == 1:
+                next_state = next_state.squeeze(1)
+            x2 = self.encoder(next_state)   #X2
+
+            # append to abstr states as transition_model inputs
+            transition_inputs = torch.cat((x2, action), dim=-1)
+            # prev_abstr_states = abstr_states
+            my_abstr_states = self.back_transition(transition_inputs)  #my_prediction
+            # breakpoint()
+            
+
+            def lalign(x, y, alpha=2):
+                return (x - y).norm(dim=1).pow(alpha)
+
+            # find diff and mask with terminals from step i
+            # diff = torch.sum(((abstr_states - target_abstr_states) * (1 - nstep_terminals[:, i])).norm(dim=-1).pow(2), dim=-1)
+            lv = lalign(abstr_states, my_abstr_states)
+            if normalize:
+                state_diff = F.pairwise_distance(x2, my_abstr_states, p=2.0).detach()
                 lv /= state_diff
 
             if validation:
                 # if we calculate validation values, sum diff over dims of abstract states and square.
-                val_diff = ((abstr_states - target_abstr_states) * (1 - nstep_terminals[:, i])).norm(dim=-1).pow(2)
+                val_diff = ((abstr_states - my_abstr_states) * (1 - nstep_terminals[:, i])).norm(dim=-1).pow(2)
                 validation_tensors += val_diff
             # loss_val += loss_func(diff, torch.zeros_like(diff))
             loss_val += lv.mean()
@@ -299,7 +394,7 @@ class NSRS(LearningAlgo):
 
         return loss_val, abstr_states
 
-    def train_repr(self, nstep_states, nstep_actions, nstep_rewards, nstep_terminals, training=True, scale=1):
+    def train_repr(self, nstep_states, nstep_actions, nstep_rewards, nstep_terminals, training=True, scale=1, renyi = -999, action_punish = 0):
         """
         Train representations from one batch of data. This should be run multiple steps
         per "training phase". agent.run() should alternate between this and
@@ -312,6 +407,7 @@ class NSRS(LearningAlgo):
         rewards: [self._batch_size]
         nextStates: [batch_size * history size * size of punctual observation (which is 2D,1D or scalar)]).
         terminals: [self._batch_size]
+        renyi: -1 origin+action,0 origin, 1 H_x, 2H_xa, 3   , 4 I_xa_x2
 
         Returns
         -------
@@ -329,6 +425,7 @@ class NSRS(LearningAlgo):
 
         nstep_onehot_actions = torch.from_numpy(nstep_onehot_actions)
         onehot_actions = torch.from_numpy(onehot_actions)
+        
 
 
         if isinstance(nstep_states, np.ndarray):
@@ -360,8 +457,16 @@ class NSRS(LearningAlgo):
         losses = {}
         all_loss_vals = torch.tensor(0).to(device).float()
 
-        abstr_state = self.encoder(states)
+        # print("states.shape", states.shape)
+        # print("states", states)
+
+
+        abstr_state = self.encoder(states)  #!encoder出来是nan
         next_abstr_state = self.encoder(next_states)
+
+        # print("action shape", nstep_onehot_actions.shape)
+        # print("abstract state shape", abstr_state.shape)
+        # print("abstract state", abstr_state)
 
         # REWARD LOSS
         if self._train_reward:
@@ -383,19 +488,61 @@ class NSRS(LearningAlgo):
 
 
         # We have our transition loss.
+         
         loss_val, transition_states = self.calc_nstep_transition_loss(abstr_state, nstep_states, nstep_onehot_actions, nstep_terminals)
         all_loss_vals += loss_val
-
         losses['transition_loss'] = loss_val.item()
 
-        # This one is very important
-        # Entropy maximization loss (through exponential) between two random states
-        # this loss is (indirectly) enforcing the radius 1 condition
+        if self._learn_back_representation:
+            loss_val, transition_states = self.calc_nstep_back_transition_loss(abstr_state, nstep_states, nstep_onehot_actions, nstep_terminals)
+            all_loss_vals += loss_val
+            losses['back_transition_loss'] = loss_val.item()
+        
+       
+        #Hx
+        if renyi == 1:  #hx sigma = 0.5
+            H_x = MI.renyi_entropy(abstr_state,sigma = 0.5,alpha = 1.01)
+            all_loss_vals += -H_x
+            losses['H_x'] = -H_x.item()
+        elif renyi == 2:    #h_xa
+            action_reshape = onehot_actions.view(onehot_actions.shape[0],-1)    #shape (64,3)
+            xa = torch.cat((abstr_state, action_reshape), dim=1)    #shape (64,7)
+            H_xa = MI.renyi_entropy(xa, sigma = 0.5, alpha = 1.01)
+            all_loss_vals += -H_xa
+            losses['H_xa'] = -H_xa.item()
+            # plot
+        elif renyi == 3:
+            # calculate_MI()
+            1
+        elif renyi == 4:
+            action_reshape = onehot_actions.view(onehot_actions.shape[0],-1)    #shape (64,3)
+            xa = torch.cat((abstr_state, action_reshape), dim=1)    #shape (64,7)
+            x2 = next_abstr_state
+            I_xa_x2 = MI.calculate_MI(xa, x2, 0.5, 0.5, alpha = 1.01, normalize=False)
+            all_loss_vals += -I_xa_x2
+            losses['I_xa_x2'] = -I_xa_x2.item()
+            # breakpoint()
+        elif renyi == -1:
 
-        # loss_val = (exp_dec_error_pytorch_2(abstr_state) + exp_dec_error_pytorch_2(next_abstr_state)) / 2
-        loss_val = (lunif(abstr_state) + lunif(next_abstr_state)) / 2
-        all_loss_vals += loss_val
-        losses['two_random_state_entropy_max_loss'] = loss_val.item()
+            # loss_val = (exp_dec_error_pytorch_2(abstr_state) + exp_dec_error_pytorch_2(next_abstr_state)) / 2
+            action_reshape = onehot_actions.view(onehot_actions.shape[0],-1)    #shape (64,3)
+            xa = torch.cat((abstr_state, action_reshape), dim=1)    #shape (64,7)
+            loss_val = lunif(xa)
+            all_loss_vals += loss_val
+            losses['two_random_state_entropy_max_loss'] = loss_val.item()
+        elif renyi == 0:
+            # This one is very important
+            # Entropy maximization loss (through exponential) between two random states
+            # this loss is (indirectly) enforcing the radius 1 condition
+
+            # loss_val = (exp_dec_error_pytorch_2(abstr_state) + exp_dec_error_pytorch_2(next_abstr_state)) / 2
+            loss_val = (lunif(abstr_state) + lunif(next_abstr_state)) / 2
+            all_loss_vals += loss_val
+            losses['two_random_state_entropy_max_loss'] = loss_val.item()
+        else:
+            raise ValueError("Please specify renyi parameter")
+        # print("renyi:", renyi)
+
 
 
         # Entropy maximization loss (through exponential) between two consecutive states
@@ -427,6 +574,9 @@ class NSRS(LearningAlgo):
                 self.optimizer_full_R.zero_grad()
             self.optimizer_encoder.zero_grad()
             self.optimizer_diff_Tx_x_.zero_grad()
+            if self._learn_back_representation:
+                self.back_optimizer_diff_Tx_x_.zero_grad()
+            
 
             all_loss_vals.backward()
             # for param in list(self.encoder.parameters()) + list(self.transition.parameters()) + list(self.R.parameters()):
@@ -437,6 +587,8 @@ class NSRS(LearningAlgo):
 
             self.optimizer_encoder.step()
             self.optimizer_diff_Tx_x_.step()
+            if self._learn_back_representation:
+                self.back_optimizer_diff_Tx_x_.step()
 
         if(self.repr_update_counter%1000==0):
             print ("Number of training repr steps:"+str(self.repr_update_counter)+".")
@@ -451,6 +603,9 @@ class NSRS(LearningAlgo):
             test_abstr_next_state = self.encoder(next_states)
             normalize_losses, transition_loss_ind = self.calc_nstep_transition_loss(
                 test_abstr_state, nstep_states, nstep_onehot_actions, nstep_terminals, validation=True, normalize=True)
+            if self._learn_back_representation:
+                back_normalize_losses, back_transition_loss_ind = self.calc_nstep_back_transition_loss(
+                    test_abstr_state, nstep_states, nstep_onehot_actions, nstep_terminals, validation=True, normalize=True)
             losses['inference_normalized_transition_losses'] = normalize_losses.item()
             random_states_loss_ind = (lunif(test_abstr_state) + lunif(test_abstr_next_state)) / 2
 
