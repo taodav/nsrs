@@ -60,7 +60,7 @@ class Defaults:
     REPLAY_MEMORY_SIZE = STEPS_PER_EPOCH * EPOCHS
     BATCH_SIZE = 64
     FREEZE_INTERVAL = 1000
-    DETERMINISTIC = True
+    DETERMINISTIC = False
 
     LEARN_REPRESENTATION = True
 
@@ -80,6 +80,7 @@ class Defaults:
 
     # SCORE_FUNC = 'ranked_avg_knn_scores'
     SCORE_FUNC = 'avg_knn_scores'
+    # SCORE_FUNC = ''
     KNN = 'batch_knn'
 
     # For loading network/dataset

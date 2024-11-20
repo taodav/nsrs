@@ -75,6 +75,7 @@ class NSRS(LearningAlgo):
         self._consec_dist = kwargs.get('consec_dist', 0.5)
         self._train_reward = kwargs.get('train_reward', False)
         self._score_func = score_func
+        # print("*******score fun:", self._score_func)
         self._knn = knn
         self._k = k
         self._double_Q = kwargs.get('double_Q', True)
@@ -295,7 +296,15 @@ class NSRS(LearningAlgo):
 
     def calc_nstep_transition_loss(self, abstr_states, nstep_states, nstep_onehot_actions, nstep_terminals,
                                    validation=False, normalize=False):
-
+        """
+        self,
+        abstr_states: torch.Tensor,     # 初始抽象状态, shape: [batch_size, abstract_dim]
+        nstep_states: torch.Tensor,     # n步的实际观察状态序列, shape: [batch_size, n_steps+obs_per_state, obs_dim] 
+        nstep_onehot_actions: torch.Tensor,  # n步的one-hot编码动作序列, shape: [batch_size, n_steps, action_dim]
+        nstep_terminals: torch.Tensor,   # n步中每一步是否终止的标志, shape: [batch_size, n_steps]
+        validation: bool = False,        # 是否计算验证损失
+        normalize: bool = False          # 是否对损失进行归一化处理
+        """
         steps = nstep_onehot_actions.shape[1]
         # initial abstract states
 
@@ -924,6 +933,12 @@ class NSRS(LearningAlgo):
             return r_vals_d0 + gamma_vals_d0 * np.amax(predicted, axis=1).flatten()
 
     def intrRewards_planning(self, abstr_state, transition, all_prev_states, R=None, ret_transitions=False):
+        """枚举所有动作能到什么状态, 然后给状态打出新颖性分数
+        
+        return:
+            scores: [action] 
+            new_state: [action * state_dim]
+        """
         num_actions = self.learn_and_plan.n_actions
 
         # indices of actions
@@ -947,12 +962,8 @@ class NSRS(LearningAlgo):
                                   all_prev_states.cpu().detach().numpy(),
                                   k=self._k, knn=self._knn)
         #print the shape of new_states all_prev_states and scores ,and themself
-        print("new_states shape: ", new_states.shape)
-        print("all_prev_states shape: ", all_prev_states.shape)
-        print("scores shape: ", scores.shape)
-        print("new_states: ", new_states)
-        print("all_prev_states: ", all_prev_states)
-        print("scores: ", scores)
+        breakpoint()
+        print("all action next predicted scores: ", scores)
         print("**********************************************")
         
         #us
@@ -966,11 +977,12 @@ class NSRS(LearningAlgo):
         return scores
 
     def novelty_one_step_planning(self, abstr_state, Q, transition, all_prev_states, R=None):
+        """计算走一步以后预期的内在奖励和外在奖励的和"""
         # with torch.no_grad():
         # get intrinsic rewards from next states
         rewards, new_states = \
             self.intrRewards_planning(abstr_state, transition, all_prev_states, R=R, ret_transitions=True)
-
+        #
         # calculate Q values from next states
         q_values_new_states = Q(new_states) # b (n_actions) x n_actions
 
@@ -978,7 +990,7 @@ class NSRS(LearningAlgo):
         max_q_new_states, argmax_q_new_states = torch.max(q_values_new_states, dim=-1)
         scores = rewards + self._df * max_q_new_states.cpu().detach().numpy()
 
-        return scores
+        return scores   #bs * n_action
 
     def chooseBestAction(self, state, mode, *args, **kwargs):
         """
@@ -1019,6 +1031,7 @@ class NSRS(LearningAlgo):
         """
         all_prev_states = all_prev_states.cpu().detach().numpy()
         class Reward:
+            """预测到达下一个状态的内外奖励只和, 内奖励用score func, 外奖励用R"""
             @staticmethod
             def predict(input_tensor):
                 # Input tensor is (s, a)

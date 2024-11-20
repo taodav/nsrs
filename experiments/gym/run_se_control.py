@@ -81,8 +81,8 @@ class Defaults:
     # REWARD_TYPE = 'null'
 
     # ACTION_TYPE = '1_step_q_planning'
-    ACTION_TYPE = 'd_step_q_planning'
-    # ACTION_TYPE = 'd_step_reward_planning'
+    ACTION_TYPE = 'd_step_q_planning'   #同时计算外部和内部reward
+    # ACTION_TYPE = 'd_step_reward_planning'    #只计算intrinsic reward
     # ACTION_TYPE = 'q_planning'
     # ACTION_TYPE = 'reward_argmax'
     # ACTION_TYPE = 'q_argmax'
@@ -92,7 +92,8 @@ class Defaults:
     # ENV = 'MountainCar-v0'
 
     # SCORE_FUNC = 'ranked_avg_knn_scores'
-    SCORE_FUNC = 'avg_knn_scores'
+    
+    # SCORE_FUNC = 
     # KNN = 'batch_count_scaled_knn'
     KNN = 'batch_knn'
 
@@ -121,11 +122,29 @@ class Defaults:
     DEPTH = 5
     HIGHER_DIM_OBS = True
 
-    # ITERS_PER_UPDATE = 5000    #origin 50000
+    #@@@@@@@@@@@@@@@@@
+    #renyi: -1 origin+action, 0 origin, 1 H_x, 2H_xa, 3   , 4 I_xa_x2
+    RENYI = 0
+    
+    METRIC_FUNCTION = 'calculate_scores_kde'
+    # METRIC_FUNCTION = 'calculate_scores'
+    
     ITERS_PER_UPDATE = 10000
+    # ITERS_PER_UPDATE = 1  @origin 50000
+    
+    # OFFLINE_PLOTTING = False
+    OFFLINE_PLOTTING = True
+    
+    # SCORE_FUNC = 'avg_knn_scores'
+    SCORE_FUNC = 'kde'
+    #@@@@@@@@@@@@@@@@@@
+    
+    
+    
+    
 
     # For plotting
-    OFFLINE_PLOTTING = False
+
 
     # Priority replay
     EXP_PRIORITY = 0.0
@@ -142,6 +161,7 @@ class Defaults:
     * only_primary
     * combined (primary for reward learning, combined for q learning)
     """
+    # REWARD_LEARNING = "only_secondary"
     REWARD_LEARNING = "combined"
 
     # Observations per state. DIFFERENT from timesteps per action.
@@ -154,6 +174,8 @@ if __name__ == "__main__":
     # --- Parse parameters ---
     parameters = process_gym_args(sys.argv[1:], Defaults)
     
+    parameters.metric_function = Defaults.METRIC_FUNCTION
+    parameters.renyi = Defaults.RENYI
     parameters.env_name = parameters.env_name.replace(" ", "--")
     parameters.env_name = f"{parameters.env}--" + parameters.env_name
     print("env_name is:", parameters.env_name)
@@ -292,6 +314,8 @@ if __name__ == "__main__":
     score_func = ranked_avg_knn_scores
     if parameters.score_func == "avg_knn_scores":
         score_func = avg_knn_scores
+    elif parameters.score_func == "kde":
+        score_func = calculate_scores_kde
 
     knn = batch_knn
     if parameters.knn == "batch_count_scaled_knn":
@@ -415,7 +439,8 @@ if __name__ == "__main__":
             knn=knn,
             secondary=True,
             plotter=plotter,
-            # metric_func=calculate_scores_kde
+            metric_func=parameters.metric_function,
+            # metric_func=calculate_scores_kde,
         ))
     elif parameters.reward_type == 'hash_count_reward':
         agent.attach(eh.HashCountRewardController(

@@ -267,7 +267,7 @@ class NoveltyRewardController(RewardController):
                                          agent._learning_algo.encoder,
                                          dist_score=self._score_func,
                                          k=self._k, knn=self._knn, plotter=self._plotter, _count = self._count)
-        print("Intrinsic rewards: ", max(intr_rewards), min(intr_rewards), np.mean(intr_rewards))
+        print("Intrinsic rewards range: ", max(intr_rewards), min(intr_rewards), np.mean(intr_rewards))
         self._plotter.plot("intrinsic_mean_rewards", np.array([self._count]), [np.mean(intr_rewards)], title_name="Intrinsic Rewards")
         # self._plotter.plot("extrinsic_rewards", np.array([self._count]), np.array([reward]), title_name="Extrinsic Rewards")
         self._count += 1
