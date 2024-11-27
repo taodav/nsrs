@@ -126,14 +126,14 @@ class Defaults:
     #renyi: -1 origin+action, 0 origin, 1 H_x, 2H_xa, 3   , 4 I_xa_x2
     RENYI = 0
     
-    METRIC_FUNCTION = 'calculate_scores_kde'
-    # METRIC_FUNCTION = 'calculate_scores'
-    
     ITERS_PER_UPDATE = 10000
     # ITERS_PER_UPDATE = 1  @origin 50000
     
     # OFFLINE_PLOTTING = False
     OFFLINE_PLOTTING = True
+    
+    METRIC_FUNCTION = 'calculate_scores_kde'
+    # METRIC_FUNCTION = 'calculate_scores'
     
     # SCORE_FUNC = 'avg_knn_scores'
     SCORE_FUNC = 'kde'

@@ -79,7 +79,7 @@ class Defaults:
     # ACTION_TYPE = 'bootstrap_q'
 
     # SCORE_FUNC = 'ranked_avg_knn_scores'
-    SCORE_FUNC = 'avg_knn_scores'
+    
     # SCORE_FUNC = ''
     KNN = 'batch_knn'
 
@@ -113,17 +113,22 @@ class Defaults:
 
     #@@@@@@@@@@@@@@@@@
     #renyi: -1 origin+action, 0 origin, 1 H_x, 2H_xa, 3   , 4 I_xa_x2
-    RENYI = 4
+    RENYI = 0
+    
+    ITERS_PER_UPDATE = 50000
+    # ITERS_PER_UPDATE = 10000 #@50000
     
     METRIC_FUNCTION = 'calculate_scores_kde'
     # METRIC_FUNCTION = 'calculate_scores'
     
-    ITERS_PER_UPDATE = 1
-    # ITERS_PER_UPDATE = 50000 #@
+    SCORE_FUNC = 'kde'
+    # SCORE_FUNC = 'avg_knn_scores'
+    
+    
+    # OFFLINE_PLOTTING = False
+    OFFLINE_PLOTTING = True
     #@@@@@@@@@@@@@@@@@@
 
-    # For plotting
-    OFFLINE_PLOTTING = False
 
     # Priority replay
     EXP_PRIORITY = 0.0
@@ -235,6 +240,8 @@ if __name__ == "__main__":
     score_func = ranked_avg_knn_scores
     if parameters.score_func == "avg_knn_scores":
         score_func = avg_knn_scores
+    elif parameters.score_func == "kde":
+        score_func = calculate_scores_kde
 
     knn = batch_knn
     if parameters.knn == "batch_count_scaled_knn":
@@ -279,8 +286,8 @@ if __name__ == "__main__":
         test_policy = ep.QArgmaxPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
         train_policy = ep.QArgmaxPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
     elif parameters.action_type == 'd_step_q_planning':
-        test_policy = ep.MCPolicy(learning_algo,  env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
-        train_policy = ep.MCPolicy(learning_algo,  env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
+        test_policy = ep.MCPolicy(learning_algo, env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
+        train_policy = ep.MCPolicy(learning_algo, env.nActions(), rng, depth=parameters.depth, epsilon_start=parameters.epsilon_start)
     elif parameters.action_type == 'bootstrap_q':
         test_policy = ep.BootstrapDQNPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
         train_policy = ep.BootstrapDQNPolicy(learning_algo, env.nActions(), rng, parameters.epsilon_start)
@@ -303,6 +310,8 @@ if __name__ == "__main__":
         test_policy=test_policy,
         train_q=train_q,
         reload=continue_running,
+        secondary_rewards=True,
+        gather_data=True,
         dataset=dataset,
         **vars(parameters))
 
@@ -370,7 +379,7 @@ if __name__ == "__main__":
             k=parameters.k,
             score_func=score_func,
             knn=knn,
-            secondary=False,
+            secondary=True,
             plotter=plotter,
             metric_func=parameters.metric_function,
         ))
@@ -379,20 +388,20 @@ if __name__ == "__main__":
             evaluate_on='action',
             periodicity=1,
             input_dims=env.inputDimensions()[0],
-            secondary=False,
+            secondary=True,
             discrete=True
         ))
     elif parameters.reward_type == 'transition_loss_reward':
         agent.attach(eh.TransitionLossRewardController(
             evaluate_on='train_loop',
             periodicity=1,
-            secondary=False
+            secondary=True
         ))
     elif parameters.reward_type == 'rnd':
         agent.attach(eh.RNDRewardController(
             evaluate_on='train_loop',
             periodicity=1,
-            secondary=False
+            secondary=True
         ))
 
     mapping_eval = "action"
@@ -451,6 +460,4 @@ if __name__ == "__main__":
         show_avg_Bellman_residual=True))
 
     agent.run(parameters.epochs, parameters.steps_per_epoch, start_count=start_count, break_on_done=True)
-    print("environment states")
-    print(env._trajectory)
 
