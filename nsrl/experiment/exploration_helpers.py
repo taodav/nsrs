@@ -267,7 +267,7 @@ class NoveltyRewardController(RewardController):
                                          agent._learning_algo.encoder,
                                          dist_score=self._score_func,
                                          k=self._k, knn=self._knn, plotter=self._plotter, _count = self._count)
-        print("Intrinsic rewards range: ", max(intr_rewards), min(intr_rewards), np.mean(intr_rewards))
+        # print("Intrinsic rewards range: ", max(intr_rewards), min(intr_rewards), np.mean(intr_rewards))
         self._plotter.plot("intrinsic_mean_rewards", np.array([self._count]), [np.mean(intr_rewards)], title_name="Intrinsic Rewards")
         # self._plotter.plot("extrinsic_rewards", np.array([self._count]), np.array([reward]), title_name="Extrinsic Rewards")
         self._count += 1
@@ -308,7 +308,7 @@ class NoveltyRewardController(RewardController):
                                                   k=self._k, knn=self._knn, plotter = self._plotter, _count = self._count)
         # latest_obs_intr_reward = np.clip(latest_obs_intr_reward, -1, 1)
         agent._dataset.updateRewards(latest_obs_intr_reward, agent._dataset.n_elems - 1, secondary=self._secondary)
-        print("newest Intrinsic rewards: ", latest_obs_intr_reward)
+        # print("newest Intrinsic rewards: ", latest_obs_intr_reward)
         self._plotter.plot("newest intrinsic_mean_rewards", np.array([self._count]), [latest_obs_intr_reward], title_name="newest Intrinsic Rewards")
 
 class HashStateCounterController(RewardController):
@@ -518,6 +518,8 @@ class TransitionLossRewardController(RewardController):
             abstr_next_states = transition(transition_input)
             squared_diff = torch.sum((abstr_next_states - target_next_states) ** 2, dim=-1)
             rewards = squared_diff.cpu().numpy()
+            rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
+            # print("reward shape:", rewards.shape)
 
         idx_to_update = list(range(len(all_obs)))
         agent._dataset.updateRewards(rewards, idx_to_update, secondary=self._secondary)
@@ -895,6 +897,87 @@ class LossPlottingController(Controller):
         del self._buffer['counts']
         self._plotter.plot_dict(counts, self._buffer)
         self._buffer = dict(counts=[])
+
+
+class ExplorationRatioPrintController(Controller):
+    """
+    Controller that prints exploration ratio to console periodically.
+    The exploration ratio is calculated as: unique_states_visited / total_possible_states
+    """
+    def __init__(self, evaluate_on='action', periodicity=100, **kwargs):
+        super(ExplorationRatioPrintController, self).__init__(**kwargs)
+        self._on_train_loop = 'train_loop' == evaluate_on
+        self._on_train_step = 'train_step' == evaluate_on
+        self._on_action = 'action' == evaluate_on
+        self._on_episode = 'episode' == evaluate_on
+        self._on_epoch = 'epoch' == evaluate_on
+        
+        self._count = 0
+        self._periodicity = periodicity
+        
+    def onActionTaken(self, agent):
+        if self._on_action:
+            self._count += 1
+            if self._count % self._periodicity == 0:
+                self._print_exploration_ratio(agent)
+                
+    def onTrainLoop(self, agent):
+        if self._on_train_loop:
+            self._count += 1
+            if self._count % self._periodicity == 0:
+                self._print_exploration_ratio(agent)
+                
+    def onTrainStep(self, agent):
+        if self._on_train_step:
+            self._count += 1
+            if self._count % self._periodicity == 0:
+                self._print_exploration_ratio(agent)
+                
+    def _print_exploration_ratio(self, agent):
+        """Calculate and print the exploration ratio"""
+        try:
+            # Get all observations from the dataset
+            all_observations = agent._dataset.observations()[0]
+            if all_observations.shape[0] < 1:
+                print(f"[Exploration] Step {self._count}: No observations yet")
+                return
+                
+            # Calculate unique observations
+            unique_observations = np.unique(all_observations, axis=0)
+            unique_count = unique_observations.shape[0]
+            total_observations = all_observations.shape[0]
+            
+            # Calculate exploration factor (unique/total observations)
+            exp_factor = unique_count / total_observations
+            
+            # For maze environment, calculate position-based exploration ratio
+            if hasattr(agent._environment, "_size_maze") and hasattr(agent._environment, "_map") and hasattr(agent._environment, "_trajectory"):
+                # Calculate unique positions visited
+                trajectory = agent._environment._trajectory
+                unique_positions = set()
+                for pos in trajectory:
+                    unique_positions.add(tuple(pos))
+                unique_positions_count = len(unique_positions)
+                
+                # Calculate total possible positions (empty spaces in maze)
+                ys, xs = np.nonzero(agent._environment._map == 0.0)
+                total_possible_positions = len(ys)
+                
+                # Position-based exploration ratio
+                position_exploration_ratio = unique_positions_count / total_possible_positions
+                
+                print(f"[Exploration] Step {self._count}: "
+                      f"Unique positions: {unique_positions_count}/{total_possible_positions} "
+                      f"({position_exploration_ratio:.4f}), "
+                      f"Unique observations: {unique_count} "
+                      f"(obs factor: {exp_factor:.4f})")
+            else:
+                print(f"[Exploration] Step {self._count}: "
+                      f"Unique states: {unique_count}/{total_observations} "
+                      f"(factor: {exp_factor:.4f})")
+                      
+        except Exception as e:
+            print(f"[Exploration] Step {self._count}: Error calculating exploration ratio: {e}")
 
 
 def simple_hash_func(arr):

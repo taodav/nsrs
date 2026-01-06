@@ -16,6 +16,15 @@ from pycolab import things as plab_things
 from pycolab.prefab_parts import sprites as prefab_sprites
 
 MAZE_ART = [
+    #5*5 simple maze
+    ['#######',
+     '#P    #',
+     '#     #',
+     '#     #',
+     '#     #',
+     '#     #',
+     '#######'],
+    
     # First we have our 10x10 maze
     ['##########',
      '#P     # #',
@@ -85,7 +94,8 @@ MAZE_ART = [
      '#     # #       #     #',
      '##### # ### ### # ### #',
      '#     #   #   # #   # #',
-     '#######################']
+     '#######################'],
+    
 ]
 
 class PlayerSprite(prefab_sprites.MazeWalker):
@@ -167,7 +177,7 @@ class MazeEnv(Environment):
         """
         self._mode = -1
         self._size_maze = size_maze
-        assert self._size_maze == 10 or self._size_maze == 21 or self._size_maze == 15
+        assert self._size_maze == 10 or self._size_maze == 21 or self._size_maze == 15 or self._size_maze == 5
 
         self._input_dims = [(1, self._size_maze, self._size_maze)]
 
@@ -184,7 +194,7 @@ class MazeEnv(Environment):
 
 
     def get_maze_index(self):
-        mapping = {10: 0, 15: 1, 21: 3}
+        mapping = {5: 0, 10: 1, 15: 2, 21: 3}
         return mapping[self._size_maze]
 
     def reset(self, mode=-1):

@@ -193,7 +193,7 @@ def calculate_scores_kde(states, memory, encoder=None, band_witdth=None, k=10, d
         
         # print("avg_rho", avg_rho)
         # print("std_rho", std_rho)
-        print("rewards", rewards)
+        # print("rewards", rewards)
         # print("states_rho", states_rho)
         # print("memory_rho", memory_rho)
         

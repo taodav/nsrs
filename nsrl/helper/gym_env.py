@@ -3,7 +3,7 @@ import os
 import numpy as np
 from gym.wrappers import Monitor
 from gym import Wrapper
-from gym.envs.classic_control import AcrobotEnv, PendulumEnv
+from gym.envs.classic_control import AcrobotEnv, PendulumEnv, MountainCarEnv, CartPoleEnv
 
 
 class PickleableEnv(Wrapper):
@@ -173,3 +173,30 @@ class ContinuableAcrobotEnv(AcrobotEnv):
             self.state = init_state
 
         return self._get_ob()
+
+class ContinuableMountainCarEnv(MountainCarEnv):
+    def __init__(self, *args, **kwargs):
+        super(ContinuableMountainCarEnv, self).__init__(*args, **kwargs)
+
+    def reset(self, init_state=None):
+        if init_state is None:
+            # 使用标准的MountainCar初始化：位置在[-0.6, -0.4]，速度为0
+            self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
+        else:
+            self.state = init_state
+
+        return np.array(self.state, dtype=np.float32)
+
+class ContinuableCartPoleEnv(CartPoleEnv):
+    def __init__(self, *args, **kwargs):
+        super(ContinuableCartPoleEnv, self).__init__(*args, **kwargs)
+
+    def reset(self, init_state=None):
+        if init_state is None:
+            # 使用标准的CartPole初始化：状态在小范围内随机
+            self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+        else:
+            self.state = init_state
+
+        self.steps_beyond_done = None
+        return np.array(self.state, dtype=np.float32)

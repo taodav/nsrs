@@ -157,6 +157,17 @@ def process_se_args(args, defaults):
     parser.add_argument('--offline-plotting', dest='offline_plotting', type=lambda x:bool(util.strtobool(x)),
                         default=defaults.OFFLINE_PLOTTING)
 
+    # Exploration tracking parameters
+    try:
+        parser.add_argument('--print-exploration-ratio', dest='print_exploration_ratio', 
+                            type=lambda x:bool(util.strtobool(x)), default=defaults.PRINT_EXPLORATION_RATIO,
+                            help='Whether to print exploration ratio to console (default: %(default)s)')
+        parser.add_argument('--exploration-print-frequency', dest='exploration_print_frequency', 
+                            type=int, default=defaults.EXPLORATION_PRINT_FREQUENCY,
+                            help='How often to print exploration ratio (default: %(default)s)')
+    except AttributeError:
+        pass
+
     parser.add_argument('--experiment-dir', dest='experiment_dir', type=str, default=defaults.EXPERIMENT_DIR)
     parser.add_argument('--start-count', dest='start_count', type=int, default=defaults.START_COUNT)
 

@@ -34,6 +34,10 @@ class Defaults:
     EPOCHS = 1
     STEPS_PER_TEST = 4000
     PERIOD_BTW_SUMMARY_PERFS = 1
+    
+    # Exploration tracking parameters
+    PRINT_EXPLORATION_RATIO = True  # Whether to print exploration ratio to console
+    EXPLORATION_PRINT_FREQUENCY = 10  # How often to print exploration ratio
 
     # ----------------------
     # Environment Parameters
@@ -58,15 +62,15 @@ class Defaults:
     EPSILON_DECAY = 100
     UPDATE_FREQUENCY = 1
     REPLAY_MEMORY_SIZE = STEPS_PER_EPOCH * EPOCHS
-    BATCH_SIZE = 64
+    BATCH_SIZE = 64 #每次训练用的大小
     FREEZE_INTERVAL = 1000
     DETERMINISTIC = False
 
     LEARN_REPRESENTATION = True
 
     # REWARD_TYPE = 'hash_count_reward'
-    # REWARD_TYPE = 'transition_loss_reward'
-    REWARD_TYPE = 'novelty_reward'
+    REWARD_TYPE = 'transition_loss_reward'
+    # REWARD_TYPE = 'novelty_reward'
     # REWARD_TYPE = 'rnd'
     # REWARD_TYPE = 'null'
 
@@ -107,7 +111,8 @@ class Defaults:
     # for ACTION_TYPE == 'd_step_q_planning':
     DEPTH = 5
 
-    SIZE_MAZE = 15 # only two options are 10 and 21
+    # SIZE_MAZE = 15 # 5 10 15 21
+    SIZE_MAZE = 15
     # MAZE_WALLS = False
     HIGHER_DIM_OBS = False # Not implemented higher_dim_obs yet
 
@@ -115,7 +120,8 @@ class Defaults:
     #renyi: -1 origin+action, 0 origin, 1 H_x, 2H_xa, 3   , 4 I_xa_x2
     RENYI = 0
     
-    ITERS_PER_UPDATE = 50000
+    # ITERS_PER_UPDATE = 10000
+    ITERS_PER_UPDATE = 1
     # ITERS_PER_UPDATE = 10000 #@50000
     
     METRIC_FUNCTION = 'calculate_scores_kde'
@@ -125,8 +131,8 @@ class Defaults:
     # SCORE_FUNC = 'avg_knn_scores'
     
     
-    # OFFLINE_PLOTTING = False
-    OFFLINE_PLOTTING = True
+    OFFLINE_PLOTTING = False
+    # OFFLINE_PLOTTING = True
     #@@@@@@@@@@@@@@@@@@
 
 
@@ -339,10 +345,11 @@ if __name__ == "__main__":
         periodicity=1,
         start_count=parameters.start_count))
 
-    baseline_data_fname = os.path.join(os.getcwd(), 'plots', 'baselines', 'random_agent_%d.json' % parameters.size_maze)
-
-    if not parameters.maze_walls:
-        baseline_data_fname=os.path.join(os.getcwd(), 'plots', 'baselines', 'random_agent_%d.json' % parameters.size_maze)
+    # baseline_data_fname = os.path.join(os.getcwd(), 'plots', 'baselines', 'random_agent_%d.json' % parameters.size_maze)
+    baseline_data_fname = None
+    
+    # if not parameters.maze_walls:
+        # baseline_data_fname=os.path.join(os.getcwd(), 'plots', 'baselines', 'random_agent_%d.json' % parameters.size_maze)
 
     # Plotting controllers
     # This controller currently only works for fully observable environments
@@ -371,6 +378,13 @@ if __name__ == "__main__":
         periodicity=10,
         sum_over=loss_plotting_sum_over
     ))
+
+    # Exploration ratio printing controller
+    if parameters.print_exploration_ratio:
+        agent.attach(eh.ExplorationRatioPrintController(
+            evaluate_on='action',
+            periodicity=parameters.exploration_print_frequency
+        ))
 
     if parameters.reward_type == 'novelty_reward':
         agent.attach(eh.NoveltyRewardController(
@@ -453,7 +467,7 @@ if __name__ == "__main__":
     # During training epochs, we want to train the agent after every [parameters.update_frequency] action it takes.
     # Plus, we also want to display after each training episode (!= than after every training) the average bellman
     # residual and the average of the V values obtained during the last episode, hence the two last arguments.
-    agent.attach(bc.TrainerController(
+    agent.attach(bc.TrainerController(  #这个就是每执行update_frequency(1)次数，更新iter_per_update次数
         evaluate_on='action',
         periodicity=parameters.update_frequency,
         show_episode_avg_V_value=True,

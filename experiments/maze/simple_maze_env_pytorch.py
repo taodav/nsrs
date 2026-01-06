@@ -26,7 +26,7 @@ class MyEnv(Environment):
         self._mode = -1
         self._mode_score = 0.0
         self._mode_episode_count = 0
-        self._size_maze=kwargs.get('size_maze', 8)
+        self._size_maze=kwargs.get('size_maze', 20)
         self._higher_dim_obs=kwargs.get("higher_dim_obs", False)
         self._maze_walls = kwargs.get('maze_walls', True)
         self.create_map()
@@ -442,7 +442,8 @@ class MyEnv(Environment):
         return [obs]
 
     def map_trajectory(self, save_image=False, img_name='default'):
-        obs = self.get_higher_dim_obs([self._pos_agent], [self._pos_goal])
+        # obs = self.get_higher_dim_obs([self._pos_agent], [self._pos_goal])
+        obs = self.get_higher_dim_obs([self._pos_agent])
 
         # Add points for all places
         for x, y in self._trajectory:

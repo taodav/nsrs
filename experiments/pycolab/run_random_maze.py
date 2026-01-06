@@ -3,7 +3,7 @@ import json
 
 import numpy as np
 from random import randrange
-from .maze_env import MazeEnv
+from maze_env import MazeEnv
 from definitions import ROOT_DIR
 
 import matplotlib.pyplot as plt

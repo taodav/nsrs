@@ -309,6 +309,7 @@ class DataSet(object):
             Number of transitions to return.
         nstep : int
             Number of transitions to be considered for each element
+            每一步都会考含有未来nstep的数据
         use_priority : Boolean
             Whether to use prioritized replay or not
 

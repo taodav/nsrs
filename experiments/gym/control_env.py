@@ -26,12 +26,21 @@ class MyEnv(Environment):
         if env == 'pendulum':
             id = 'PendulumModified-v1'
             entry_point = 'nsrl.helper.gym_env:ContinuablePendulumEnv'
+        elif env == 'mountaincar':
+            id = 'MountainCarModified-v1'
+            entry_point = 'nsrl.helper.gym_env:ContinuableMountainCarEnv'
+        elif env == 'cartpole':
+            id = 'CartPoleModified-v1'
+            entry_point = 'nsrl.helper.gym_env:ContinuableCartPoleEnv'
         max_steps = kwargs.get('max_steps', 200)
-        gym.envs.register(
-            id=id,
-            entry_point=entry_point,
-            max_episode_steps=max_steps,
-        )
+
+        # 检查环境是否已经注册，避免重复注册
+        if id not in gym.envs.registry.env_specs:
+            gym.envs.register(
+                id=id,
+                entry_point=entry_point,
+                max_episode_steps=max_steps,
+            )
 
         self.env = gym.make(id)
         if seed is not None:
@@ -59,7 +68,7 @@ class MyEnv(Environment):
         self._last_observation = None
         self.is_terminal = False
         self._higher_dim_obs = higher_dim_obs
-        # self._input_dim = [(obs_per_state,) + self.env.observation_space.shape]  # self.env.observation_space.shape is equal to 2
+        # 设置输入维度
         if self._higher_dim_obs:
             size = self._frame_size
             if timesteps_per_action > 1:
@@ -67,6 +76,13 @@ class MyEnv(Environment):
             elif obs_per_state >= 1:
                 size = (obs_per_state, ) + size
             self._input_dim = [size]
+        else:
+            # 低维观测：根据环境类型设置观测维度
+            obs_shape = self.env.observation_space.shape
+            if obs_per_state > 1:
+                self._input_dim = [(obs_per_state,) + obs_shape]
+            else:
+                self._input_dim = [obs_shape]
         self._intern_dim = intern_dim
         self._save_dir = save_dir
 
@@ -165,7 +181,13 @@ class MyEnv(Environment):
         """
 
         save_image = kwargs.get('save_image', False)
-        action_meanings = ['+1', '0', '-1']
+        # 根据环境类型设置动作含义
+        if hasattr(self.env, 'unwrapped') and 'MountainCar' in str(type(self.env.unwrapped)):
+            action_meanings = ['Left', 'None', 'Right']  # MountainCar动作含义
+        elif hasattr(self.env, 'unwrapped') and 'CartPole' in str(type(self.env.unwrapped)):
+            action_meanings = ['Left', 'Right']  # CartPole动作含义
+        else:
+            action_meanings = ['+1', '0', '-1']  # Acrobot/Pendulum动作含义
 
         with torch.no_grad():
             for m in learning_algo.all_models: m.eval()

@@ -88,8 +88,9 @@ class Defaults:
     # ACTION_TYPE = 'q_argmax'
     # ACTION_TYPE = 'bootstrap_q'
 
-    ENV = 'acrobot'
-    # ENV = 'MountainCar-v0'
+    # ENV = 'acrobot'
+    ENV = 'mountaincar'
+    # ENV = 'cartpole'
 
     # SCORE_FUNC = 'ranked_avg_knn_scores'
     
@@ -121,13 +122,14 @@ class Defaults:
     # if ACTION_TYPE == 'd_step_q_planning':
     DEPTH = 5
     HIGHER_DIM_OBS = True
+    # HIGHER_DIM_OBS = False
 
     #@@@@@@@@@@@@@@@@@
     #renyi: -1 origin+action, 0 origin, 1 H_x, 2H_xa, 3   , 4 I_xa_x2
     RENYI = 0
     
-    ITERS_PER_UPDATE = 10000
-    # ITERS_PER_UPDATE = 1  @origin 50000
+    ITERS_PER_UPDATE = 1
+    # ITERS_PER_UPDATE = 1  #@origin 50000
     
     # OFFLINE_PLOTTING = False
     OFFLINE_PLOTTING = True
@@ -166,7 +168,8 @@ class Defaults:
 
     # Observations per state. DIFFERENT from timesteps per action.
     OBS_PER_STATE = 4   #see 4 consecutive states as one state
-    MONITOR = True #origin False
+    # MONITOR = True #origin False
+    MONITOR = False #origin False
     TRAIN_CSC_DIST = False
 
 if __name__ == "__main__":
@@ -473,12 +476,13 @@ if __name__ == "__main__":
             start_count=start_count,
             periodicity=abstr_plotting_periodicity
         ))
-    if hasattr(parameters, 'monitor') and parameters.monitor:
-        agent.attach(bc.VideoRecordingController(
-            periodicity=checkpoint_freq,
-            evaluate_on='action',
-            start_count=checkpoint_start_count
-        ))
+    # 服务器上不需要视频录制
+    # if hasattr(parameters, 'monitor') and parameters.monitor:
+    #     agent.attach(bc.VideoRecordingController(
+    #         periodicity=checkpoint_freq,
+    #         evaluate_on='action',
+    #         start_count=checkpoint_start_count
+    #     ))
 
     # Every epoch end, one has the possibility to modify the learning rate using a LearningRateController. Here we
     # wish to update the learning rate after every training epoch (periodicity=1), according to the parameters given.

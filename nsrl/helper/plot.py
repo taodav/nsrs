@@ -363,8 +363,9 @@ def plot_baseline(plot_fname, ax1, ax2, legends, keys, plot=True):
 
 if __name__ == "__main__":
     from definitions import ROOT_DIR
-    experiment = os.path.join(ROOT_DIR, "experiments", 'ALE', "runs", 'montezumas revenge novelty_reward_with_d_step_q_planning_2020-05-29 12-48-51_8222810/plot')
-    replay_plot(experiment)
+    # experiment = os.path.join(ROOT_DIR, "experiments", 'ALE', "runs", 'montezumas revenge novelty_reward_with_d_step_q_planning_2020-05-29 12-48-51_8222810/plot')
+    dir = "C:\\Users\\15210\\Desktop\\nsrs\\examples\\pycolab\\experiments\\N_maze novelty reward with d step q planning_2024-11-28 00-31-25_0\\plot"
+    replay_plot(dir)
 
     # exp_dir_walls = os.path.join(ROOT_DIR, "experiments", 'maze', "runs", 'walls_count_q')
     # plot_offline(exp_dir_walls)
